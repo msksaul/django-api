@@ -11,5 +11,5 @@ class CircleModelSerializer(serializers.ModelSerializer):
       'id', 'name', 'slug_name',
       'about', 'picture',
       'rides_offered', 'is_public',
-      'is_limited', 'members_list'
+      'is_limited', 'members_limit'
     )
