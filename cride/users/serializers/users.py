@@ -1,5 +1,7 @@
 from django.contrib.auth import authenticate, password_validation
 from django.core.validators import RegexValidator
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
 
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
@@ -50,9 +52,23 @@ class UserSignUpSerializer(serializers.Serializer):
   
   def create(self, data):
     data.pop('password_confirmation')
-    user = User.objects.create_user(**data)
+    user = User.objects.create_user(**data, is_verified=False)
     profile = Profile.objects.create(user=user)
+    self.send_confirmation_email(user)
     return user
+  
+  def send_confirmation_email(self, user):
+    verification_token = self.gen_verification_token(user)
+    subject = 'welcome@{}! Veryfi your account'.format(user.username)
+    from_email = 'Comparte Ride <noreply@comparteride.com>'
+    content = render_to_string('emails/users/account_verification.html', {'token': verification_token, 'user': user})
+    msg = EmailMultiAlternatives(subject, content, from_email, [user.email])
+    msg.attach_alternative(content, 'text/html')
+    msg.send()
+
+
+  def gen_verification_token(self, user):
+    return 'abc'
 
 class UserLoginSerializer(serializers.Serializer):
   
@@ -64,6 +80,8 @@ class UserLoginSerializer(serializers.Serializer):
     user = authenticate(username=data['email'], password=data['password'])
     if not user:
       raise serializers.ValidationError('Invalid credentials')
+    if not user.is_verified:
+      raise serializers.ValidationError('Account is not active yet')
     self.context['user'] = user
     return data
 
