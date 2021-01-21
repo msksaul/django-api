@@ -15,12 +15,15 @@ from cride.users.serializers import (
   UserModelSerializer,
   UserSignUpSerializer,
   AccountVerificationSerializer,
+  ProfileModelSerializer,
 )
 
 from cride.users.models import User
 from cride.circles.models import Circle
 
-class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class UserViewSet(mixins.RetrieveModelMixin, 
+                  viewsets.GenericViewSet,
+                  mixins.UpdateModelMixin,):
 
   queryset = User.objects.filter(is_active=True, is_client=True)
   serializer_class = UserModelSerializer
@@ -29,7 +32,7 @@ class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
   def get_permissions(self):
     if self.action in ['signup', 'login', 'verify']:
       permissions = [AllowAny]
-    elif self.action == 'retrieve':
+    elif self.action in ['retrieve', 'update', 'partial_update']:
       permissions = [IsAuthenticated, IsAccountOwner]
     else:
       permissions = [IsAuthenticated]
@@ -61,6 +64,21 @@ class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     serializer.save()
     data = {'message': 'You are now verified'}
     return Response(data, status=status.HTTP_200_OK)
+
+  @action(detail=True, methods=['put', 'patch'])
+  def profile(self, request, *args, **kwargs):
+    user = self.get_object()
+    profile = user.profile
+    partial = request.method == 'PATCH'
+    serializer = ProfileModelSerializer(
+      profile,
+      data= request.data,
+      partial=partial
+    )
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    data = UserModelSerializer(user).data
+    return Response(data)
 
   def retrieve(self, request, *args, **kwargs):
     response = super(UserViewSet, self).retrieve(request, *args, **kwargs)
