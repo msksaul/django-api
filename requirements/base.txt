@@ -12,6 +12,8 @@ django-environ==0.4.5
 
 djangorestframework==3.9.0
 
+pyjwt>=1.7.1
+
 # Passwords security
 argon2-cffi==20.1.0
 
